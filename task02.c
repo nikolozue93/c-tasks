@@ -4,7 +4,6 @@
 #include <string.h>
 
 
-
 int main(int argc, char *argv[]){
     if(argc < 2){
         fprintf(stderr, "Not enough arguments\n");
@@ -18,15 +17,24 @@ int main(int argc, char *argv[]){
         return 1;
     }
 
-    char *path_clone = strdup(path); 
-    // maybe i need to check memory allocation for clone?
-    char *dir = strtok(path_clone, ":");
+    int has_error = 0; // to track whether to return 1 or not
 
     for(int i = 1; i < argc; i++){
-        while(dir != NULL){
-            char *command = argv[i];
+        int found = 0;
+        char *command = argv[i];
 
-            size_t total_len = sizeof(dir) + sizeof(command) + 1;
+        // potential improvement: extracting from full paths like /usr/bin/ls
+        char *path_clone = strdup(path); 
+        if(path_clone == NULL){
+            fprintf(stderr, "Memory allocation failed\n");
+            return 1;
+        }
+        char *dir = strtok(path_clone, ":");
+
+
+        while(dir != NULL){
+            // /bin + 1 for /
+            size_t total_len = strlen(dir) + 1 + strlen(command) + 1;
             char *combined = malloc(total_len);
 
             if(combined == NULL){
@@ -34,21 +42,27 @@ int main(int argc, char *argv[]){
                 return 1;
             }
             
-            snprintf(combined, total_len, "%s%s", dir, command);
+            snprintf(combined, total_len, "%s/%s", dir, command);
 
-            // should i directly terminate as soon as i find non executable file
-            if(access(combined, X_OK) != 0){ 
-                fprintf(stderr, "%s not found\n", command);
-                exit(1);
+            if(access(combined, X_OK) == 0){
+                printf("%s\n", combined);
+                found = 1;
+                free(combined);
+                break;
             }
-            printf("%s\n", combined);
-
+            free(combined);
             dir = strtok(NULL, ":");
         }
+        free(path_clone);
 
-        free(dir);
+        if(!found){
+            fprintf(stderr, "%s not found\n", command);
+            has_error = 1;
+        }
     }
 
+    if(has_error) 
+        return 1;
 
     return 0;
 }
