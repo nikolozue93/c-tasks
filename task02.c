@@ -19,7 +19,7 @@ char *find_in_path(const char *command, const char *path){
         char *combined = malloc(total_len);
         if(combined == NULL){
             printf("Memory allocation failed\n");
-            return NULL;
+            break;
         }
 
         snprintf(combined, total_len, "%s/%s", dir, command);
@@ -38,7 +38,6 @@ char *find_in_path(const char *command, const char *path){
 }
 
 
-
 int main(int argc, char *argv[]){
     if(argc < 2){
         fprintf(stderr, "Not enough arguments\n");
@@ -55,19 +54,23 @@ int main(int argc, char *argv[]){
     int has_error = 0; // to track whether to return 1 or not
 
     for(int i = 1; i < argc; i++){
-        int found = 0;
         char *command = argv[i];
 
-        // potential improvement: extracting from full paths like /usr/bin/ls
+        if(strchr(command, '/') != NULL){
+            if(access(command, X_OK) == 0){
+                printf("%s\n", command);
+            } else {
+                printf("%s not found\n", command);
+                has_error = 1;
+            }
+            continue;
+        }
 
         char *found_path = find_in_path(command, path);
         if(found_path != NULL){
             printf("%s\n", found_path);
-            found = 1;
             free(found_path);
-        }
-
-        if(!found){
+        } else {
             fprintf(stderr, "%s not found\n", command);
             has_error = 1;
         }
